@@ -13,7 +13,7 @@ using namespace kult;
 using position = component<'pos2', vec2>;
 using velocity = component<'vel2', vec2>;
 
-auto movementSystem = []( float delta ) {
+void movementSystem( float delta ) {
     for( auto &id : join<position,velocity>() ) {
         get<position>(id).x += get<velocity>(id).x * delta;
         get<position>(id).y += get<velocity>(id).y * delta;

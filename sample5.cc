@@ -29,13 +29,7 @@ using position = kult::component< 'pos2', vec2f >;
 
 int main()
 {
-    using kult::add;
-    using kult::del;
-    using kult::has;
-    using kult::get;
-    using kult::join;
-    using kult::system;
-    using kult::exclude;
+    using namespace kult;
 
     // entities
     int none = 0, player = 1, enemy = 2;
@@ -96,7 +90,7 @@ int main()
     }
 
     // systems; simulate a spell bomb in entities of any type
-    for( auto &id : system<mana>() ) {
+    for( auto &id : join<mana>() ) {
         std::cout << "spellboomb!!!" << std::endl;
         get<mana>(id) -= 50;
     }

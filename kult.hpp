@@ -1,5 +1,7 @@
-// Kult - A lightweight entity/component library written in C++11
+// Kult - A lightweight entity/component/system library written in C++11
 // rlyeh, 2013 - 2014. MIT licensed.
+
+// @todo: [ entity, component, system( position, velocity ), engine ].diff(), patch(), save(), load(), versioning?
 
 #pragma once
 
@@ -13,12 +15,21 @@
 #include <vector>
 #include <omp.h>
 #include <sstream>
+#include <functional>
 
 #ifdef   KULT_DEFINE
 #include <medea/medea.hpp>
 namespace kult {
     using medea::print;
 }
+#endif
+
+#if defined(_NDEBUG) || defined(NDEBUG)
+#define KULT_DEBUG(...)
+#define KULT_RELEASE(...) __VA_ARGS__
+#else
+#define KULT_DEBUG(...)   __VA_ARGS__
+#define KULT_RELEASE(...)
 #endif
 
 namespace kult {
@@ -84,53 +95,78 @@ namespace kult {
         return ++_id;
     }
 
-    // kult::entity, kult::component
+    // kult::entity
 
-    enum SUBSYSTEM_MODE {
+    std::string dump( const type & );
+
+    class entity {
+    public:
+        type id;
+        entity( const type &id_ = kult::id() ) : id(id_)
+        {}
+        operator type const &() const {
+            return id;
+        }
+        operator type &() {
+            return id;
+        }
+        template<typename component>
+        typename decltype(component::value_type) &operator []( const component &t ) const {
+            return kult::add<component>(id), kult::get<component>(id);
+        }
+        std::string str() const {
+            return kult::dump(id);
+        }
+    };
+
+    // kult::component
+
+    enum GROUPBY_MODE {
         JOIN = 0, MERGE = 1, EXCLUDE = 2
     };
 
     template<typename T>
-    inline kult::set<type> &system() {
-        static kult::set<type> entities;
+    inline kult::set<entity> &any() {
+        static kult::set<entity> entities;
         return entities;
     }
-    template<typename T, int MODE>
-    inline kult::set<type> subsystem( const kult::set<type> &B ) {
-        const kult::set<type> &A = system<T>(), *tiny, *large;
+    template<int MODE>
+    inline kult::set<entity> group_by( const kult::set<entity> &A, const kult::set<entity> &B ) {
+        const kult::set<entity> *tiny, *large;
         if( A.size() < B.size() ) tiny = &A, large = &B;
         else                      tiny = &B, large = &A;
-        kult::set<type> newset;  // union first, then difference, then intersection
+        kult::set<entity> newset;  // union first, then difference, then intersection
         /**/ if (MODE == MERGE)   { newset = *large; for( auto &id : *tiny ) newset.insert(id); }
         else if (MODE == EXCLUDE) { newset = *large; for( auto &id : *tiny ) newset.erase (id); }
-#if 1
         else { for( auto &id : *tiny ) if( large->find(id) != large->end() ) newset.insert(id); }
-#else
-        else { std::set_union( A.begin(), A.end(), B.begin(), B.end(), std::inserter(newset, newset.begin()) ); }
-#endif
         return newset;
     }
 
-// sugars
-template<class T, class U>                   kult::set< type > join() { return subsystem<T,JOIN>( system<U>() );   }
-template<class T, class U, class V>          kult::set< type > join() { return subsystem<T,JOIN>( join<U,V>() );   }
-template<class T, class U, class V, class W> kult::set< type > join() { return subsystem<T,JOIN>( join<U,V,W>() ); }
-template<class T> kult::set< type > exclude( const kult::set<type> &B ) { return subsystem<T,EXCLUDE>(B); }
+    // sugars {
+    template<class T>                            kult::set< entity > join()   { return any<T>();                                  }
+    template<class T, class U>                   kult::set< entity > join()   { return group_by<JOIN>( any<T>(), any<U>() );      }
+    template<class T, class U, class V>          kult::set< entity > join()   { return group_by<JOIN>( any<T>(), join<U,V>() );   }
+    template<class T, class U, class V, class W> kult::set< entity > join()   { return group_by<JOIN>( any<T>(), join<U,V,W>() ); }
+    template<class T> kult::set<entity> exclude( const kult::set<entity> &B ) { return group_by<EXCLUDE>( any<T>(), B); }
+    template<class T, class U> kult::set<entity> join( const T &t, const U &u ) { return join<T,U>(); }
+    // }
 
-// parallelize
-#ifdef _MSC_VER
-#define OMP_PARA_INTERNAL __pragma(omp parallel for)
-#else
-#define OMP_PARA_INTERNAL _Pragma("omp parallel for") // C99
-#endif
-#define parallelize(id, sys) while(1) { \
-const std::vector<type> vsys( sys.begin(), sys.end() ); \
-const int end = vsys.size(); int it; \
-OMP_PARA_INTERNAL for( it = 0; it < end; ++it ) { \
-    auto &id = vsys[it];
-    // [...]
-#define pend \
-} break; }
+    using system = std::function<bool(double,float)>;
+
+    // parallelize
+#   ifdef _MSC_VER
+#       define OMP_PARA_INTERNAL __pragma(omp parallel for)
+#   else
+#       define OMP_PARA_INTERNAL _Pragma("omp parallel for") // C99
+#   endif
+#   define parallelize(id, sys) while(1) { \
+        const std::vector<type> vsys( sys.begin(), sys.end() ); \
+        const int end = vsys.size(); int it; \
+        OMP_PARA_INTERNAL for( it = 0; it < end; ++it ) { \
+            auto &id = vsys[it];
+            // [...]
+#   define pend \
+        } break; }
 
     template<typename T>
     kult::map< type, T > &components() {
@@ -143,27 +179,29 @@ OMP_PARA_INTERNAL for( it = 0; it < end; ++it ) { \
     }
     template<typename T>
     inline decltype(T::value_type) &get( type id ) {
-#if 1 // fast
-        return components<T>()[id].value_type;
-#else // safe
+        KULT_DEBUG(
+        // safe
         static decltype(T::value_type) invalid, reset;
         return has<T>(id) ? components<T>()[id].value_type : invalid = reset;
-#endif
+        )
+        KULT_RELEASE(
+        // fast
+        return components<T>()[id].value_type;
+        )
     }
     template<typename T>
-    decltype(T::value_type) &add( type id ) {
-        system<T>().insert( id );
+    inline decltype(T::value_type) &add( type id ) {
+        any<T>().insert( id );
         components<T>()[id] = components<T>()[id];
         return get<T>(id);
     }
-    template<typename T> bool del( type id ) {
+    template<typename T>
+    inline bool del( type id ) {
         add<T>(id);
         components<T>().erase( id );
-        system<T>().erase( id );
+        any<T>().erase( id );
         return !has<T>( id );
     }
-    struct icomponent;
-    std::vector<const icomponent*>registered;
     struct icomponent {
         virtual ~icomponent() {}
         virtual void purge( type ) const = 0;
@@ -172,29 +210,45 @@ OMP_PARA_INTERNAL for( it = 0; it < end; ++it ) { \
         virtual void copy( type, type ) const = 0;
         virtual void dump( std::ostream &, type ) const = 0;
     };
+    static inline
+    std::vector<const icomponent*> &registered() {
+        static std::vector<const icomponent*> vector;
+        return vector;
+    }
     template<type NAME, typename T>
     struct component : icomponent {
         T value_type;
         component() {
             static struct registerme {
                 registerme() {
-                    /*
-                    char n = ( NAME >> 24 ) & 0xff;
-                    char a = ( NAME >> 16 ) & 0xff;
-                    char m = ( NAME >>  8 ) & 0xff;
-                    char e = ( NAME >>  0 ) & 0xff;
-                    std::cout << "<kult/kult.hpp> says: registering component [" << this << "] " << n << a << m << e << std::endl;
-                    */
-                    registered.push_back( new component() );
+                    registered().push_back( new component() );
                 }
             } _;
         }
+
+        // sugars {
+        const component &operator+=( type id ) const {
+            return add<component>(id), *this;
+        }
+        T &operator[]( type id ) const {
+            return operator+=(id), get<component>(id);
+        }
+        // }
+
         virtual void purge( type id ) const {
             del<component>(id);
         }
         virtual void swap( type to, type from ) const {
-            //if( has<component>(to) && has<component>(from) )
-            std::swap( get<component>(to), get<component>(from) );
+            KULT_DEBUG(
+                // safe
+                if( has<component>(to) && has<component>(from) ) {
+                    std::swap( get<component>(to), get<component>(from) );
+                }
+            )
+            KULT_RELEASE(
+                // fast
+                std::swap( get<component>(to), get<component>(from) );
+            )
         }
         virtual void merge( type to, type from ) const {
             add<component>(to) = get<component>(from);
@@ -224,58 +278,58 @@ OMP_PARA_INTERNAL for( it = 0; it < end; ++it ) { \
         }
     };
 
-    static
-    std::string dump( type id ) {
+    static inline
+    std::string dump( const type &id ) {
         std::stringstream ss;
-        for( auto &it : registered ) {
+        for( auto &it : registered() ) {
             it->dump( ss, id );
         }
         return ss.str();
     }
-    static
-    int purge( int id ) { // clear
-        for( auto &it : registered ) {
+    static inline
+    type purge( const type &id ) { // clear
+        for( auto &it : registered() ) {
             it->purge( id );
         }
         return id;
     }
-    static
-    int swap( int to, int from ) {
-        for( auto &it : registered ) {
+    static inline
+    type swap( const type &to, const type &from ) {
+        for( auto &it : registered() ) {
             it->swap( to, from );
         }
         return to;
     }
-    static
+    static inline
     type merge( type to, type from ) {
-        for( auto &it : registered ) {
+        for( auto &it : registered() ) {
             it->merge( to, from );
         }
         return to;
     }
-    static
+    static inline
     type copy( type to, type from ) {
-        for( auto &it : registered ) {
+        for( auto &it : registered() ) {
             it->copy( to, from );
         }
         return to;
     }
-    static
-    int spawn( int from ) {
+    static inline
+    type spawn( const type &from ) {
         return copy( id(), from );
     }
     /*
-    static
-    int restart( int id ) {
+    static inline
+    type restart( const type &id ) {
         return copy( id, type(id) );
     }
-    static
-    int respawn( int id ) {
+    static inline
+    type respawn( const type &id ) {
         return copy( id, type(id) );
     }
     */
-    static
-    int reset( int id ) {
+    static inline
+    type reset( const type &id ) {
         return copy( id, none() );
     }
     // kill(id);
@@ -283,5 +337,4 @@ OMP_PARA_INTERNAL for( it = 0; it < end; ++it ) { \
     // load() -> patch( zero(), diff );
     // undo()
     // redo()
-
 }

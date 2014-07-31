@@ -105,7 +105,7 @@ void compo_tests() {
     }
 
     // systems; simulate a spell bomb in entities of any type
-    for( auto &id : system<mana>() ) {
+    for( auto &id : join<mana>() ) {
         get<mana>(id) -= 50;
     }
 

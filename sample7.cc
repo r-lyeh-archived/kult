@@ -1,15 +1,3 @@
-kult
-====
-
-- Kult is a lightweight entity/component/system library written in C++11.
-- Kult is tiny.
-- Kult is header-only.
-- Kult is expressive.
-- Kult has no dependencies.
-- Kult is MIT licensed.
-
-### sample
-```c++
 #include <iostream>
 #include "kult.hpp"
 
@@ -63,4 +51,3 @@ int main(int argc, const char **argv) {
 
     return 0;
 }
-```
