@@ -6,7 +6,7 @@ kult
 - Kult is header-only.
 - Kult is expressive.
 - Kult has no dependencies.
-- Kult is MIT licensed.
+- Kult is BOOST licensed.
 
 ### sample
 ```c++
