@@ -97,6 +97,7 @@ namespace kult {
 
     // kult::entity
 
+    static inline
     std::string dump( const type & );
 
     class entity {
