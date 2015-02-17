@@ -13,9 +13,12 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <omp.h>
 #include <sstream>
 #include <functional>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 #ifdef   KULT_DEFINE
 #include <medea/medea.hpp>
@@ -100,6 +103,11 @@ namespace kult {
     static inline
     std::string dump( const type & );
 
+    template<typename T>
+    inline decltype(T::value_type) &add( type id );
+    template<typename T>
+    inline decltype(T::value_type) &get( type id );
+
     class entity {
     public:
         type id;
@@ -112,7 +120,7 @@ namespace kult {
             return id;
         }
         template<typename component>
-        typename decltype(component::value_type) &operator []( const component &t ) const {
+        decltype(component::value_type) &operator []( const component &t ) const {
             return kult::add<component>(id), kult::get<component>(id);
         }
         std::string str() const {
@@ -125,6 +133,8 @@ namespace kult {
     enum GROUPBY_MODE {
         JOIN = 0, MERGE = 1, EXCLUDE = 2
     };
+
+    class entity;
 
     template<typename T>
     inline kult::set<entity> &any() {
@@ -271,10 +281,10 @@ namespace kult {
             os << ss.str();
 #endif
         }
-        inline typename T &operator()( type id ) {
+        inline T &operator()( type id ) {
             return get<component>(id);
         }
-        inline typename const T &operator()( type id ) const {
+        inline const T &operator()( type id ) const {
             return get<component>(id);
         }
     };
