@@ -1,4 +1,4 @@
-kult
+kult <a href="https://travis-ci.org/r-lyeh/kult"><img src="https://api.travis-ci.org/r-lyeh/kult.svg?branch=master" align="right" /></a>
 ====
 
 - Kult is a lightweight entity/component/system library written in C++11.
