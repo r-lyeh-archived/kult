@@ -40,9 +40,9 @@ struct vec2 {
     bool operator==( const vec2 &other ) const {
         return x == other.x && y == other.y;
     }
-    template<class T>
-    friend inline T& operator <<( T &ostream, const vec2 &self ) {
-        return ostream << "(x=" << self.x << ",y=" << self.y << ")", ostream;
+    template<class ostream>
+    friend inline ostream& operator <<( ostream &os, const vec2 &self ) {
+        return os << "(x=" << self.x << ",y=" << self.y << ")", os;
     }
 };
 

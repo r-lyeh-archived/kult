@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
     add<position>(player) = { 0, 0 };
     add<velocity>(player) = { 2, 4 };
 
-    for(;;) {
+    for( unsigned times = 0; times < 100; ++times ) {
         movementSystem(0.0016f);
         std::cout << get<position>(player) << std::endl;
     }

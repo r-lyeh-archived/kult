@@ -16,15 +16,15 @@
 #include <sstream>
 #include <functional>
 
-#ifdef _OPENMP
-#include <omp.h>
-#endif
-
 #ifdef   KULT_DEFINE
 #include <medea/medea.hpp>
 namespace kult {
     using medea::print;
 }
+#endif
+
+#ifdef _OPENMP
+#include <omp.h>
 #endif
 
 #if defined(_NDEBUG) || defined(NDEBUG)
@@ -100,13 +100,14 @@ namespace kult {
 
     // kult::entity
 
+    // forward declarations {
     static inline
     std::string dump( const type & );
-
-    template<typename T>
-    inline decltype(T::value_type) &add( type id );
     template<typename T>
     inline decltype(T::value_type) &get( type id );
+    template<typename T>
+    inline decltype(T::value_type) &add( type id );
+    // }
 
     class entity {
     public:
@@ -133,8 +134,6 @@ namespace kult {
     enum GROUPBY_MODE {
         JOIN = 0, MERGE = 1, EXCLUDE = 2
     };
-
-    class entity;
 
     template<typename T>
     inline kult::set<entity> &any() {
@@ -220,21 +219,23 @@ namespace kult {
         virtual void merge( type, type ) const = 0;
         virtual void copy( type, type ) const = 0;
         virtual void dump( std::ostream &, type ) const = 0;
+        static 
+        std::vector<const icomponent*> &registered() {
+            static std::vector<const icomponent*> vector;
+            return vector;
+        }
     };
-    static inline
-    std::vector<const icomponent*> &registered() {
-        static std::vector<const icomponent*> vector;
-        return vector;
-    }
     template<type NAME, typename T>
     struct component : icomponent {
         T value_type;
-        component() {
-            static struct registerme {
-                registerme() {
-                    registered().push_back( new component() );
-                }
-            } _;
+        component( bool reentrant = 0 ) {
+            if( !reentrant ) {
+                static struct registerme {
+                    registerme() {
+                        icomponent::registered().push_back( new component(1) );
+                    }
+                } _;                
+            }
         }
 
         // sugars {
@@ -292,35 +293,35 @@ namespace kult {
     static inline
     std::string dump( const type &id ) {
         std::stringstream ss;
-        for( auto &it : registered() ) {
+        for( auto &it : icomponent::registered() ) {
             it->dump( ss, id );
         }
         return ss.str();
     }
     static inline
     type purge( const type &id ) { // clear
-        for( auto &it : registered() ) {
+        for( auto &it : icomponent::registered() ) {
             it->purge( id );
         }
         return id;
     }
     static inline
     type swap( const type &to, const type &from ) {
-        for( auto &it : registered() ) {
+        for( auto &it : icomponent::registered() ) {
             it->swap( to, from );
         }
         return to;
     }
     static inline
     type merge( type to, type from ) {
-        for( auto &it : registered() ) {
+        for( auto &it : icomponent::registered() ) {
             it->merge( to, from );
         }
         return to;
     }
     static inline
     type copy( type to, type from ) {
-        for( auto &it : registered() ) {
+        for( auto &it : icomponent::registered() ) {
             it->copy( to, from );
         }
         return to;
