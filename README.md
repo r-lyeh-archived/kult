@@ -6,7 +6,7 @@ kult <a href="https://travis-ci.org/r-lyeh/kult"><img src="https://api.travis-ci
 - Kult is header-only.
 - Kult is expressive.
 - Kult has no dependencies.
-- Kult is BOOST licensed.
+- Kult is zlib/libpng licensed.
 
 ### sample
 ```c++

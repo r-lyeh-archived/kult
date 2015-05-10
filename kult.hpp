@@ -1,5 +1,5 @@
 // Kult - A lightweight entity/component/system library written in C++11
-// rlyeh, 2013 - 2014. BOOST licensed.
+// rlyeh, 2013 - 2014. zlib/libpng licensed.
 
 // @todo: [ entity, component, system( position, velocity ), engine ].diff(), patch(), save(), load(), versioning?
 
