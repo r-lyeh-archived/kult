@@ -1,3 +1,5 @@
+// demo1: construct two objects dinamically using the add<component_t>(id) syntax
+
 #include <string>
 #include <sstream>
 #include <iostream>
@@ -39,6 +41,9 @@ int main( int argc, char **argv )
 
         // print objects
         std::cout << dump(obj1) << std::endl;
+        std::cout << dump(obj2) << std::endl;
+
+        purge(obj2);
         std::cout << dump(obj2) << std::endl;
     }
 

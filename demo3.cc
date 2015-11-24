@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
 
     for( unsigned times = 0; times < 100; ++times ) {
         movementSystem(0.0016f);
-        std::cout << get<position>(player) << std::endl;
+        std::cout << dump(player) << std::endl;
     }
 
     return 0;

@@ -32,7 +32,7 @@ int main( int argc, char **argv )
         // benchmark its access time
 
         {
-            std::cout << "Benchmarking... ";
+            std::cout << "Benchmarking get<T>(id) syntax... ";
             std::chrono::microseconds seconds1, seconds2;
             {
                 auto t_start = std::chrono::high_resolution_clock::now();
@@ -53,6 +53,40 @@ int main( int argc, char **argv )
 
         // debug obj
         std::cout << dump(obj1) << std::endl;
+    }
+
+    {
+        // obj
+        kult::entity obj;
+        kult::component<'cter', size_t> counter;
+
+        {
+            std::cout << "Benchmarking T[id] syntax... ";
+            std::chrono::microseconds seconds1, seconds2;
+            {
+                auto t_start = std::chrono::high_resolution_clock::now();
+                for( size_t i = 0; i < 200000000; ++i )
+                    counter[ obj ]++;
+                seconds1 = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - t_start);
+            }
+            size_t &ref = counter[ obj ];
+            {
+                auto t_start = std::chrono::high_resolution_clock::now();
+                for( size_t i = 0; i < 200000000; ++i )
+                    ref++;
+                seconds2 = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - t_start);
+            }
+            double relative_speed = double( seconds1.count() ) / seconds2.count();
+            std::cout << "relative access is x" << std::fixed << std::setprecision(2) << relative_speed << " times " << ( seconds1 >= seconds2 ? "slower" : "faster" ) << " than direct access" << std::endl;
+        }
+
+        // debug obj
+        std::cout << dump(obj) << std::endl;
+
+        kult::purge(obj);
+
+    // debug obj
+        std::cout << dump(obj) << std::endl;
     }
 
     return 0;

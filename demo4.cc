@@ -20,12 +20,11 @@ kult::component<'pos2', vec2> position;
 kult::component<'vel2', vec2> velocity;
 
 // systems
-kult::system movement = [&]( double t, float dt ) {
+kult::system<float> movement = [&]( float dt ) {
     for( auto &entity : kult::join( position, velocity ) ) {
         entity[ position ].x += entity[ velocity ].x * dt;
         entity[ position ].y += entity[ velocity ].y * dt;
     }
-    return true;
 };
 
 // app
@@ -42,12 +41,20 @@ int main(int argc, const char **argv) {
 
     // simulate 100 frames
     for( int i = 0; i < 100; ++i ) {
-        movement(0, 1/60.f);
+        movement( 1/60.f );
     }
 
     // print status
-    std::cout << player.str() << std::endl;
-    std::cout << enemy.str() << std::endl;
+    std::cout << player.dump() << std::endl;
+    std::cout << enemy.dump() << std::endl;
+
+    // purge entities
+    player.purge();
+    enemy.purge();
+
+    // print status
+    std::cout << player.dump() << std::endl;
+    std::cout << enemy.dump() << std::endl;
 
     return 0;
 }

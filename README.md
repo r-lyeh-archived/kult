@@ -1,14 +1,14 @@
-kult :fire: <a href="https://travis-ci.org/r-lyeh/kult"><img src="https://api.travis-ci.org/r-lyeh/kult.svg?branch=master" align="right" /></a>
+kult :crystal_ball: <a href="https://travis-ci.org/r-lyeh/kult"><img src="https://api.travis-ci.org/r-lyeh/kult.svg?branch=master" align="right" /></a>
 ====
 
-- Kult is a lightweight entity/component/system library written in C++11.
-- Kult is tiny.
-- Kult is header-only.
-- Kult is expressive.
-- Kult has no dependencies.
-- Kult is zlib/libpng licensed.
+Kult is a lightweight entity/component/system library (C++11).
 
-### sample
+## Features 
+- [x] Expressive.
+- [x] Tiny, cross-platform, self-contained, header-only.
+- [x] ZLIB/libPNG licensed.
+
+### Showcase
 ```c++
 #include <iostream>
 #include "kult.hpp"
@@ -32,12 +32,11 @@ kult::component<'pos2', vec2> position;
 kult::component<'vel2', vec2> velocity;
 
 // systems
-kult::system movement = [&]( double t, float dt ) {
+kult::system<float> movement = [&]( float dt ) {
     for( auto &entity : kult::join( position, velocity ) ) {
         entity[ position ].x += entity[ velocity ].x * dt;
         entity[ position ].y += entity[ velocity ].y * dt;
     }
-    return true;
 };
 
 // app
@@ -54,13 +53,49 @@ int main(int argc, const char **argv) {
 
     // simulate 100 frames
     for( int i = 0; i < 100; ++i ) {
-        movement(0, 1/60.f);
+        movement( 1/60.f );
     }
 
     // print status
-    std::cout << player.str() << std::endl;
-    std::cout << enemy.str() << std::endl;
+    std::cout << player.dump() << std::endl;
+    std::cout << enemy.dump() << std::endl;
+
+    // purge entities
+    player.purge();
+    enemy.purge();
+
+    // print status
+    std::cout << player.dump() << std::endl;
+    std::cout << enemy.dump() << std::endl;
 
     return 0;
 }
 ```
+
+### Output
+```
+{       name: player #1,
+        desc: this is our warrior,
+        pos2: (x:3.33333,y:6.66666),
+        vel2: (x:2,y:4),
+}
+{       name: orc #1,
+        pos2: (x:0,y:0),
+}
+{}
+{}
+```
+
+### Reading
+- https://github.com/sosolimited/Entity-Component-Samples
+
+### Alternatives
+- https://github.com/alecthomas/entityx
+- https://github.com/dbralir/ginseng
+- https://github.com/miguelmartin75/anax
+- https://github.com/Nocte-/es
+- https://github.com/SuperV1234/SSVEntitySystem
+
+### Changelog
+- v1.0.0 (2015/11/24): Allow external serializer; new entity methods; extra join/exclude sugars; improve dump info
+- v0.0.0 (2014/05/04): Initial commit
